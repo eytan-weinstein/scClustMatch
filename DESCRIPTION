@@ -1,0 +1,39 @@
+Package: scClustMatch
+Title: scClustMatch: A data visualization tool for interpreting the effects of reference choice on scRNAseq clustering results
+Version: 1.0.0.0
+Date: 2021-08-15
+Authors@R: 
+    person("Eytan", "Weinstein", , "eytan.weinstein@mail.utoronto.ca", role = c("aut", "cre"))
+Description: A data visualization tool for interpreting the effects of reference choice on scRNAseq clustering results.
+License: GPL-2
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Imports:
+    methods (>= 4.1.2),
+    utils (>= 4.1.2),
+    Seurat (>= 4.0.6),
+    aricode (>= 1.0.0),
+    igraph (>= 1.2.11),
+    rmarkdown (>= 2.12),
+    ggplot2 (>= 3.3.5),
+    gplots (>= 3.1.1),
+    ggalluvial (>= 0.12.3),
+    ggrepel (>= 0.9.1),
+    knitr (>= 1.37)
+Depends: R (>= 4.0.0)
+Collate:
+    'clustering.R'
+    'get_first_clustering.R'
+    'remove_unique_cells.R'
+    'get_class_labels.R'
+    'compute_similarity.R'
+    'get_max_similar_clustering.R'
+    'get_second_clustering.R'
+    'compute_biadjacency_matrix.R'
+    'find_matching_clusters.R'
+    'compare_clusterings.R'
+Suggests: 
+    testthat (>= 3.0.0),
+    rdrop2 (>= 0.8.2.1)
+Config/testthat/edition: 3

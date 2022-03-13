@@ -1,0 +1,194 @@
+---
+title: "scClustMatch"
+output: html_document
+params:
+    first_clustering: "first_clustering"
+    second_clustering: "second_clustering"
+---
+```{r setup, include = FALSE}
+library(methods)
+library(Seurat)
+library(aricode)
+library(igraph)
+library(rmarkdown)
+library(ggplot2)
+library(gplots)
+library(ggalluvial)
+library(ggrepel)
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+
+sobj_1 <- get_Seurat_object(params$first_clustering)
+sobj_2 <- get_Seurat_object(params$second_clustering)
+```
+\
+\
+```{r metadata, echo = FALSE}
+metadata_labels <- c("Cells",
+"Reference-specific cells",
+"Median UMI count/cell",
+"Median gene count/cell",
+"PCA dimensions",
+"Clustering resolution",
+"Number of clusters")
+
+# Metadata for Reference Genome #1 clustering
+
+first_metadata <- list(as.integer(length(colnames(sobj_1@assays$RNA@counts))),
+as.integer(length(setdiff(colnames(sobj_1@assays$RNA@counts), colnames(sobj_2@assays$RNA@counts)))),
+as.integer(median(sobj_1@meta.data$nFeature_RNA)),
+as.integer(median(sobj_1@meta.data$nCount_RNA)),
+as.integer(get_dims(params$first_clustering)),
+get_clustering_resolution(params$first_clustering),
+as.integer(get_number_of_clusters(params$first_clustering)))
+
+# Metadata for Reference Genome #2 clustering
+
+second_metadata <- list(as.integer(length(colnames(sobj_2@assays$RNA@counts))),
+as.integer(length(setdiff(colnames(sobj_2@assays$RNA@counts), colnames(sobj_1@assays$RNA@counts)))),
+as.integer(median(sobj_2@meta.data$nFeature_RNA)),
+as.integer(median(sobj_2@meta.data$nCount_RNA)),
+as.integer(get_dims(params$second_clustering)),
+get_clustering_resolution(params$second_clustering),
+as.integer(get_number_of_clusters(params$second_clustering)))
+
+knitr::kable(cbind(metadata_labels, first_metadata, second_metadata),
+col.names = c("", "Reference Genome #1", "Reference Genome #2"),
+caption = "Table 1: Comparing metadata from Reference Genome #1 clustering and Reference Genome #2 clustering")
+```
+\
+\
+```{r UMAPs, figures-side, fig.show="hold", out.width="50%", echo = FALSE}
+Seurat::DimPlot(sobj_1)
+Seurat::DimPlot(sobj_2)
+```
+\
+\
+```{r cluster_composition, figures-side, fig.show="hold", out.width="50%", echo = FALSE}
+# Cluster composition, Reference Genome #1
+
+cells_by_cluster <- remove_unique_cells(params$first_clustering, params$second_clustering)
+all_cells_by_cluster_1 <- get_cells_by_cluster(params$first_clustering)
+cluster_labels_1 <- 0:(length(cells_by_cluster[[1]]) - 1)
+non_unique_cells_1 <- sapply(seq_len(length(cells_by_cluster[[1]])),
+    function(i)
+        length((cells_by_cluster[[1]])[[i]])
+)
+unique_cells_1 <- sapply(seq_len(length(cells_by_cluster[[1]])),
+    function(i)
+        length(all_cells_by_cluster_1[[i]]) - non_unique_cells_1[i]
+)
+graph_1 <- rbind(data.frame(cluster_labels_1, cells = non_unique_cells_1,
+type = rep("non_unique", length(cluster_labels_1))),
+data.frame(cluster_labels_1, cells = unique_cells_1,
+type = rep("unique", length(cluster_labels_1))))
+
+# Cluster composition, Reference Genome #2
+
+all_cells_by_cluster_2 <- get_cells_by_cluster(params$second_clustering)
+cluster_labels_2 <- 0:(length(cells_by_cluster[[2]]) - 1)
+non_unique_cells_2 <- sapply(seq_len(length(cells_by_cluster[[2]])),
+    function(i)
+        length((cells_by_cluster[[2]])[[i]])
+)
+unique_cells_2 <- sapply(seq_len(length(cells_by_cluster[[2]])),
+    function(i)
+        length(all_cells_by_cluster_2[[i]]) - non_unique_cells_2[i]
+)
+graph_2 <- rbind(data.frame(cluster_labels_2, cells = non_unique_cells_2,
+type = rep("non_unique", length(cluster_labels_2))),
+data.frame(cluster_labels_2, cells = unique_cells_2,
+type = rep("unique", length(cluster_labels_2))))
+
+# Graphs of cluster composition
+
+ggplot2::ggplot(data = graph_1,
+aes(x = cluster_labels_1, y = cells, fill = type)) +
+    geom_bar(stat = "identity") + coord_flip() +
+    labs(title = "Number of cells by cluster, Reference Genome #1",
+    x = "Cluster number", y = "Number of cells", fill = "") +
+    scale_fill_discrete(labels = c("Common to both references",
+    "Reference-specific")) +
+    scale_x_continuous(breaks = seq(0, 1000, 1))
+ggplot2::ggplot(data = graph_2,
+aes(x = cluster_labels_2, y = cells, fill = type)) +
+    geom_bar(stat = "identity") + coord_flip() +
+    labs(title = "Number of cells by cluster, Reference Genome #2",
+    x = "Cluster number", y = "Number of cells", fill = "") +
+    scale_fill_discrete(labels = c("Common to both references",
+    "Reference-specific")) +
+    scale_x_continuous(breaks = seq(0, 1000, 1))
+```
+\
+\
+```{r heatmap, echo = FALSE}
+biadjacency_matrix <- compute_biadjacency_matrix(params$first_clustering, params$second_clustering)
+gplots::heatmap.2(biadjacency_matrix,
+col = colorRampPalette(c("white", "pink", "red"))(n = 100), key.title = "",
+key.xlab = "J(i, j)", key.ylab = NA, tracecol = NA,
+ylab = "Reference Genome #1", xlab = "Reference Genome #2",
+main = "Pairwise cluster similarities")
+```
+\
+\
+```{r cluster_matching, echo = FALSE}
+# Matching concordant clusters
+
+matching_cluster_labels <- find_matching_clusters(params$first_clustering, params$second_clustering)
+
+# Pairwise Jaccard similarity scores for concordant clusters
+
+similarity_scores <- sapply(seq_len(length(cluster_labels_1)),
+    function(i)
+        if (is.na(matching_cluster_labels[i])) {
+            NA
+        }
+        else {
+            (length(intersect((cells_by_cluster[[1]])[[cluster_labels_1[i]
+            + 1]],
+            (cells_by_cluster[[2]])[[matching_cluster_labels[i] + 1]]))) /
+            (length(union((cells_by_cluster[[1]])[[cluster_labels_1[i] + 1]],
+            (cells_by_cluster[[2]])[[matching_cluster_labels[i] + 1]])))
+        }
+)
+
+knitr::kable(data.frame(cluster_labels_1, matching_cluster_labels,
+similarity_scores),
+col.names = c("Cluster i, Reference Genome #1",
+"Cluster j, Reference Genome #2", "J(i, j)"),
+caption = "Table 2: Concordant clusters between Reference Genome #1 clustering and Reference Genome #2 clustering")
+```
+\
+\
+```{r Sankey, echo = FALSE, results = 'hide'}
+class_labels <- get_class_labels(params$first_clustering, params$second_clustering)
+class_labels_1 <- class_labels[[1]]
+class_labels_2 <- class_labels[[2]]
+cells <- rep(1, length(class_labels_1))
+matching_cluster_labels[is.na(matching_cluster_labels)] <- -2
+assignment <- sapply(seq_len(length(class_labels_1)),
+    function(i)
+        if (class_labels_2[i] == matching_cluster_labels[class_labels_1[i] + 1]) {
+            "Assigned to concordant cluster"
+        }
+        else {
+            "Not assigned to concordant cluster"
+        }
+)
+
+ggplot(data.frame(assignment, class_labels_1, class_labels_2, cells),
+aes(y = cells, axis1 = class_labels_1, axis2 = class_labels_2)) +
+geom_alluvium(aes(fill = assignment), width = 1 / 12) +
+geom_stratum(width = 1 / 12, fill = "black", color = "grey") +
+scale_x_discrete(limits = c("Clusters, Reference Genome #1",
+"Clusters, Reference Genome #2"), expand = c(0.1, 0.1)) +
+labs(y = "Number of cells", fill = "") +
+ggrepel::geom_text_repel(aes(label = ifelse(after_stat(x) == 1,
+as.character(after_stat(stratum)), "")), stat = "stratum", size = 4,
+direction = "y", nudge_x = -.6) +
+ggrepel::geom_text_repel(aes(label = ifelse(after_stat(x) == 2,
+as.character(after_stat(stratum)), "")), stat = "stratum", size = 4,
+direction = "y", nudge_x = +.6) +
+scale_fill_brewer(type = "qual", palette = "Set1") +
+ggtitle("Cluster assignments of reference-common cells")
+```
