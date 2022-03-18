@@ -106,39 +106,7 @@ These data suggest that Clusters 10 and 9 were indeed matched correctly by `scCl
 
 A detailed description of the `scClustMatch` data model and algorithm is presented as follows:
 
-**Definition.** Given ![A](https://latex.codecogs.com/gif.latex?A), the set of cells detected by read alignment to Reference Genome #1, and ![B](https://latex.codecogs.com/gif.latex?B), the set of cells detected by read alignment to Reference Genome #2, we define ![C_full](https://latex.codecogs.com/gif.latex?C%20%3D%20A%20%5Ccap%20B) as the set of cells detected by both alignments. 
-
-We note that by aligning the same reads to both Reference Genome #1 and Reference Genome #2, respectively, we obtain two partitions (clusterings) of ![C](https://latex.codecogs.com/gif.latex?C):
-
-1. ![first_clustering](https://latex.codecogs.com/gif.latex?X%20%3D%20%5C%7BX_1%2C...%2C%20X_d%5C%7D)
-
-2. ![second_clustering](https://user-images.githubusercontent.com/97738309/158730938-bea514db-15f3-4388-907c-d6e20687721e.gif)
-
-We note further that the concordance between clusterings ![X](https://latex.codecogs.com/gif.latex?X) and ![Y](https://latex.codecogs.com/gif.latex?Y) can be summarized with the following contingency table, where each entry ![nij](https://latex.codecogs.com/gif.latex?n_i_j%20%3D%20%7CX_i%20%5Ccup%20Y_j%7C) denotes the number of cells commonly assigned to clusters ![Xi](https://latex.codecogs.com/gif.latex?X_i) and ![Yj](https://latex.codecogs.com/gif.latex?Y_j),
-
-<img width="300" alt="Screenshot 2022-03-17 at 2 32 38 AM" src="https://user-images.githubusercontent.com/97738309/158750632-ef8142b1-3468-427e-b309-6743b404e125.png">
-
-and quantified with the adjusted Rand index (ARI) similarity score
-
-![ARI](https://latex.codecogs.com/gif.latex?ARI%28X%2C%20Y%29%20%3D%20%5Cfrac%7B%5Csum%20_i_j%5Cbinom%7Bn_i_j%7D%7B2%7D%20-%20%5B%5Csum%20_i%5Cbinom%7Ba_i%7D%7B2%7D%5Csum%20_j%5Cbinom%7Bb_j%7D%7B2%7D%5D/%5Cbinom%7Bn%7D%7B2%7D%7D%7B%5Cfrac%7B1%7D%7B2%7D%5B%5Csum%20_i%5Cbinom%7Ba_i%7D%7B2%7D%20&plus;%20%5Csum%20_j%5Cbinom%7Bb_j%7D%7B2%7D%5D%20-%20%5B%5Csum%20_i%5Cbinom%7Ba_i%7D%7B2%7D%5Csum%20_j%5Cbinom%7Bb_j%7D%7B2%7D%5D/%5Cbinom%7Bn%7D%7B2%7D%7D)
-
-where ![nij_only](https://latex.codecogs.com/gif.latex?n_i_j), ![ai](https://latex.codecogs.com/gif.latex?a_i), and ![bj](https://latex.codecogs.com/gif.latex?b_j) are values from the contingency table above.
-
-**Definition.** Suppose that ![X](https://latex.codecogs.com/gif.latex?X) is resolved at a user-selected `Seurat` clustering resolution ![X_resolution](https://latex.codecogs.com/gif.latex?r_x), and that ![Y](https://latex.codecogs.com/gif.latex?Y) is resolved at some arbitrary `Seurat` clustering resolution ![Y resolution](https://latex.codecogs.com/gif.latex?r%5Cin%20R), where ![R](https://latex.codecogs.com/gif.latex?R) is defined the set of all possible `Seurat` clustering resolutions for ![Y](https://latex.codecogs.com/gif.latex?Y). Note that if ![S](https://latex.codecogs.com/gif.latex?S%20%5Csubseteq%20%5B0%2C%201%5D) is defined as the set of all possible values of ![possible_ARI](https://latex.codecogs.com/gif.latex?ARI%28X%2C%20Y%29), then we can define a function ![mapping](https://latex.codecogs.com/gif.latex?f%28r%29%3A%20R%20%5Crightarrow%20S) which maps to every choice ![r](https://latex.codecogs.com/gif.latex?r) of `Seurat` clustering resolution for ![Y](https://latex.codecogs.com/gif.latex?Y) some similarity score ![possible_ARI](https://latex.codecogs.com/gif.latex?ARI%28X%2C%20Y%29) between clusterings ![X](https://latex.codecogs.com/gif.latex?X) and ![Y](https://latex.codecogs.com/gif.latex?Y). 
-
-Thus, to select a `Seurat` clustering resolution ![Y_resolution](https://latex.codecogs.com/gif.latex?r_y) for ![Y](https://latex.codecogs.com/gif.latex?Y) which maximizes the concordance between ![X](https://latex.codecogs.com/gif.latex?X) and ![Y](https://latex.codecogs.com/gif.latex?Y), we set
-
-<img width="182" alt="Screenshot 2022-03-17 at 5 20 15 PM" src="https://user-images.githubusercontent.com/97738309/158897197-8024dc11-7379-4351-8342-a7f67312b72b.png">
-
-**Definition.** Suppose that clustering ![X](https://latex.codecogs.com/gif.latex?X) is resolved at ![X_resolution](https://latex.codecogs.com/gif.latex?r_x), and that clustering ![Y](https://latex.codecogs.com/gif.latex?Y) is resolved at ![Y_res](https://latex.codecogs.com/gif.latex?r_y), as obtained above. If a set of vertices ![V](https://latex.codecogs.com/gif.latex?V%20%3D%20X%20%5Ccup%20Y) consists of all clusters across both ![X](https://latex.codecogs.com/gif.latex?X) and ![Y](https://latex.codecogs.com/gif.latex?Y), then we can define a bipartite graph ![bipartite_graph](https://latex.codecogs.com/gif.latex?G%20%3D%20%28V%2C%20E%29) with bipartition ![X, Y](https://latex.codecogs.com/gif.latex?%28X%2C%20Y%29) and weight function ![weight](https://latex.codecogs.com/gif.latex?w%20%3A%20E%5Crightarrow%20%5Cmathbb%7BR%7D).
-
-Suppose that this weight function ![weight](https://latex.codecogs.com/gif.latex?w%20%3A%20E%5Crightarrow%20%5Cmathbb%7BR%7D) maps each edge between vertices ![vertices](https://latex.codecogs.com/gif.latex?X_i%2C%20Y_j) to the Jaccard similarity between the sets of cells assigned respectively to ![X_i](https://latex.codecogs.com/gif.latex?X_i) and ![Y_j](https://latex.codecogs.com/gif.latex?Y_j):
-
-![gif-3](https://user-images.githubusercontent.com/97738309/158966061-db201eac-c240-4328-a224-5f8c41072a0b.gif)
-
-To determine the best possible matching of clusters between ![X](https://latex.codecogs.com/gif.latex?X) and ![Y](https://latex.codecogs.com/gif.latex?Y), we find a matching of maximum weight for bipartite graph ![G](https://latex.codecogs.com/gif.latex?G), where the weight of matching ![M](https://latex.codecogs.com/gif.latex?M) is given by
-
-![gif-4](https://user-images.githubusercontent.com/97738309/158973575-2af117d4-ec38-4e73-bac2-b73e4442cdf4.gif)
+<img width="850" alt="Screenshot 2022-03-18 at 6 26 03 AM" src="https://user-images.githubusercontent.com/97738309/158986434-28922b25-3660-4871-8bad-3436f8ccdca8.png">
 
 In `scClustMatch`, maximum weight matching in the bipartite graph ![G](https://latex.codecogs.com/gif.latex?G) is implemented by the Hungarian algorithm provided with the `igraph` package. 
 
