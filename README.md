@@ -15,9 +15,6 @@ Read alignment to a reference genome assembly is an integral component of most s
 ```r
 devtools::install_github("eytan-weinstein/scClustMatch")
 ```
-
-To avoid bugs that may arise from inconsistencies between package dependencies and the current R workspace, it is advisable to install `scClustMatch` in one R terminal before loading the package with `library(scClustMatch)` in a new R terminal. 
-
 ## Example
 
 In the present example, `scClustMatch` is used to interpret the effects of reference choice on the clustering of a peripheral blood mononuclear cell (PBMC) single-cell dataset from a healthy woodchuck (*Marmota monax*). We aligned our dataset to two discordant reference assemblies for the woodchuck: MONAX5 [1] and Woodchuck_1.0 [4], each using the Cell Ranger pipeline from 10x Genomics [6]. The resulting barcodes, features, and count matrix for each alignment were stored in respective directories on a local machine:
